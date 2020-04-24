@@ -5,60 +5,29 @@
 #include "opcodes.h"
 
 struct Machine {
-  uint8_t* mem;
-  uint64_t pc, r0, r1, f;
+  uint8_t* program;
+  uint64_t pc, esp, ebp;
 };
 
 #define EQ_BIT 1
 
-#define MEM_IMMEDIATE_64() *(uint64_t*)(machine->mem + machine->pc + 1)
-
-#define end_state(machine) \
-  printf("Finished"); \
-  return; \
-
-#define MOV_IMMEDIATE(regid, reg) \
-  *reg = MEM_IMMEDIATE_64(); \
-  machine->pc += 9; \
-  //printf("movi %s %li\n", regid, *reg);
-
-#define mov_imm_r0(machine) MOV_IMMEDIATE("r0", &machine->r0) 
-
-#define ADD_IMMEDIATE(regid, reg) \
-  *reg += MEM_IMMEDIATE_64(); \
-  machine->pc += 9; \
-  //printf("addi %s, %li\n", regid, *reg);
-#define add_imm_r0(machine) ADD_IMMEDIATE("r0", &machine->r0)
-
-#define CMP_IMMEDIATE(regid, reg) \
-  if (*reg == MEM_IMMEDIATE_64()) { \
-    machine->f |= EQ_BIT; \
-  } else { \
-    machine->f &= !EQ_BIT; \
-  } \
-  machine->pc += sizeof(uint64_t) + 1; \
-
-#define cmp_imm_r0(machine) CMP_IMMEDIATE("r0", &machine->r0);
-
-#define jne_imm(machine) \
-  if (machine->f & EQ_BIT) { \
-    machine->pc += sizeof(uint64_t) + 1; \
-  } else { \
-    machine->pc = MEM_IMMEDIATE_64(); \
-  }
+#define MEM_IMMEDIATE(type, offset) *(type*)(machine->program + machine->pc + 1 + offset)
 
 void print_state(struct Machine* machine) {
-  printf("%li %li %li\n", machine->pc, machine->r0, machine->r1);
+  printf("PC:%li EBP:%li ESP:%li\n", machine->pc, machine->ebp, machine->esp);
 }
 
 void step_machine(struct Machine* machine) {
+   uint8_t const_type;
+   struct BLValue new_value;
 
   #ifdef FAST_MODE
     printf("Built with computed goto\n");
     #define GO_NEXT_INSTR() \
-     goto *vm_states[machine->mem[machine->pc]];
+     goto *vm_states[machine->program[machine->pc]];
     static void* vm_states[256] = {};
     vm_states[EXIT] = &&dEXIT;
+    vm_states[PUSH_CONST] = &&dPUSH_CONST;
   #else
     printf("Built with switch\n");
     #define GO_NEXT_INSTR() //no op
@@ -66,11 +35,21 @@ void step_machine(struct Machine* machine) {
 
   while (1) {
     //printf("%li\n", machine->mem[machine->pc]);
-    switch (machine->mem[machine->pc]) {
-      case EXIT:
-        dEXIT:
-        end_state(machine);
-        GO_NEXT_INSTR()
+    switch (machine->program[machine->pc]) {
+      case EXIT: dEXIT:
+        printf("Bye. Have a good time\n");
+	return;
+      case PUSH_CONST:
+        dPUSH_CONST:
+       	const_type = MEM_IMMEDIATE(uint8_t, 0);
+	new_value.type = const_type;
+        switch (const_type) {
+          BLI32:
+	    new_value.data.idata = MEM_IMMEDIATE(int32_t, 1);
+            break;
+	  default: printf("Invalid type on push\n"); return;
+        }
+
         break;
     }
   }
@@ -81,7 +60,8 @@ void step_machine(struct Machine* machine) {
 int main(int argc, char** argv) {
   struct Machine m1;
   m1.pc = 0;
-  m1.f = 0;
+  m1.esp = 0;
+  m1.ebp = 0;
   step_machine(&m1); 
   print_state(&m1);
 }

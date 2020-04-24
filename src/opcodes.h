@@ -8,11 +8,11 @@ enum BLOP {
 };
 
 enum BLType {
-  i32 = 0 
+  BLI32 = 0 
 };
 
 union BLData {
-  int32_t idata
+  int32_t idata;
 };
 
 struct BLValue {
