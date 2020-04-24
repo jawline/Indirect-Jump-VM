@@ -77,7 +77,7 @@ bool lex_next(FILE* rdr, struct LexItem* result) {
     return false;
   }
 
-  printf("%i %s\n", result->type, lbuffer);
+  //printf("%i %s\n", result->type, lbuffer);
   return true;
 }
 
@@ -118,7 +118,7 @@ void resolve_labels(struct program* out, struct labels* label_list, struct label
   struct Label* tl;
   struct Label* cl;
 
-  printf("Resolving labels\n");
+  //printf("Resolving labels\n");
 
   for (size_t i = 0; i < labels_size(unresolved); i++) {
     tl = &unresolved->data[i];
@@ -126,14 +126,14 @@ void resolve_labels(struct program* out, struct labels* label_list, struct label
       cl = &label_list->data[j];
       if (strcmp(tl->name, cl->name) == 0) {
         *((uint32_t*) (out->data + tl->pos)) = cl->pos;
-        printf("Resolved a label\n");
-        printf("%li\n", *((uint32_t*) out->data + tl->pos));	
+        //printf("Resolved a label\n");
+        //printf("%li\n", *((uint32_t*) (out->data + tl->pos)));	
       } else {
-        printf("Not resolved %s %s\n", tl->name, cl->name);
+        //printf("Not resolved %s %s\n", tl->name, cl->name);
       }
     }
   }
-  printf("Done label resolution\n");
+  //printf("Done label resolution\n");
 }
 
 void build_jmp(enum BLOP type, FILE* rdr, struct program* out, struct labels* label_list, struct labels* unresolved) {
@@ -142,13 +142,14 @@ void build_jmp(enum BLOP type, FILE* rdr, struct program* out, struct labels* la
   struct Label nl;
 
   if (next_token(rdr, &item) && item.type == CMD) {
-    program_push(out, JMP);
+    printf("Build JNE %i\n", type);
+    program_push(out, type);
     size_t ref_start = program_size(out);
     program_expand(out, sizeof(uint32_t));
     strcpy(nl.name, item.lbuffer);
     nl.pos = ref_start;
-    labels_push(&unresolved, nl);
-    resolve_labels(out, &label_list, &unresolved);
+    labels_push(unresolved, nl);
+    resolve_labels(out, label_list, unresolved);
   } else {
     printf("JMP expects label\n");
   }
@@ -174,6 +175,7 @@ void parse(FILE* rdr, struct program* out) {
       labels_push(&label_list, nl);
       printf("Label %s at %i\n", nl.name, nl.pos);
       fgetc(rdr);
+      resolve_labels(out, &label_list, &unresolved);
     } else { //Command
       if (strcmp(item.lbuffer, "push") == 0) {
         if (next_token(rdr, &item) && item.type == VAL) {
@@ -197,7 +199,9 @@ void parse(FILE* rdr, struct program* out) {
         program_push(out, MUL);
       } else if (strcmp(item.lbuffer, "div") == 0) {
         program_push(out, DIV);
-      } else if (strcmp(item.lbuffer, "jmp") == 0) {
+      } else if (strcmp(item.lbuffer, "pop") == 0) {
+	program_push(out, POP);
+      }	else if (strcmp(item.lbuffer, "jmp") == 0) {
         build_jmp(JMP, rdr, out, &label_list, &unresolved);	
       } else if (strcmp(item.lbuffer, "je") == 0) {
         build_jmp(JE, rdr, out, &label_list, &unresolved);

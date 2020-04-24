@@ -1,8 +1,23 @@
-push 0
+push 1
 
-loop:
-  push 1
-  add
+outer:
+
+  push 0
+  inner:
+
+    push 2
+    add
+
+    pushr -1
+    push 6000000
+    jne inner
+  pop 
+
+  push 2
+  mul
+
   pushr -1
-  push 100
-  jne loop
+  push 4096
+  push 16
+  mul
+  jne outer

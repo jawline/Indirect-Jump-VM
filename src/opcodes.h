@@ -6,6 +6,7 @@ enum BLOP {
   EXIT = 0,
   PUSH_CONST,
   PUSH_RELATIVE_SP,
+  POP,
   ADD,
   SUB,
   MUL,

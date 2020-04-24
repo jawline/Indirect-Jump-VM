@@ -19,7 +19,7 @@ struct Machine {
 #define MEM_IMMEDIATE(type, offset) *(type*)(machine->program + machine->pc + 1 + offset)
 
 void print_state(struct Machine* machine) {
-  printf("PC:%li EBP:%li ESP:%li\n", machine->pc, machine->ebp, machine->esp);
+  printf("PC:%lu EBP:%lu ESP:%li\n", machine->pc, machine->ebp, machine->esp);
   size_t max_size = program_stack_size(&machine->stack);
   for (size_t i = 0; i < max_size; i++) {
     printf("SI%i:%i\n", i,machine->stack.data[i].data.idata);
@@ -77,11 +77,14 @@ void step_machine(struct Machine* machine) {
     vm_states[EXIT] = &&dEXIT;
     vm_states[PUSH_CONST] = &&dPUSH_CONST;
     vm_states[PUSH_RELATIVE_SP] = &&dPUSH_RELATIVE_SP;
+    vm_states[POP] = &&dPOP;
     vm_states[ADD] = &&dADD;
     vm_states[SUB] = &&dSUB;
     vm_states[MUL] = &&dMUL;
     vm_states[DIV] = &&dDIV;
     vm_states[JMP] = &&dJMP;
+    vm_states[JE] = &&dJE;
+    vm_states[JNE] = &&dJNE;
   #else
     printf("Built with switch\n");
     #define GO_NEXT_INSTR() //no op
@@ -107,6 +110,7 @@ void step_machine(struct Machine* machine) {
 	    return;
         }
         program_stack_push(&machine->stack, new_value);
+	//print_state(machine);
 	GO_NEXT_INSTR();
         break;
       case PUSH_RELATIVE_SP:
@@ -117,12 +121,20 @@ void step_machine(struct Machine* machine) {
 	machine->pc += 5;
 	GO_NEXT_INSTR();
 	break;
+      case POP:
+dPOP:
+	program_stack_pop(&machine->stack);
+	machine->pc++;
+	GO_NEXT_INSTR();
+	break;
       case ADD:
 	dADD:
+	//printf("ADD\n");
 	lval = program_stack_pop(&machine->stack);
 	rval = program_stack_pop(&machine->stack);
 	add_blvalue(&lval, &rval);
 	program_stack_push(&machine->stack, lval);
+        //print_state(machine);
 	machine->pc++;
 	GO_NEXT_INSTR();
 	break;
