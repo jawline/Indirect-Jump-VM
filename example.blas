@@ -1,5 +1,8 @@
-push 5
-push 10
-push 20
-mul
-add
+push 0
+
+loop:
+  push 1
+  add
+  pushr -1
+  push 100
+  jne loop

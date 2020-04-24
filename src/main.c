@@ -4,6 +4,7 @@
 #include <string.h>
 #include "opcodes.h"
 #include <bllist.h>
+#include <stdbool.h>
 
 DYNAMIC_ARRAY(program_stack, struct BLValue, 1024);
 
@@ -21,7 +22,7 @@ void print_state(struct Machine* machine) {
   printf("PC:%li EBP:%li ESP:%li\n", machine->pc, machine->ebp, machine->esp);
   size_t max_size = program_stack_size(&machine->stack);
   for (size_t i = 0; i < max_size; i++) {
-    printf("SI%i:%i\n", machine->stack.data[i].data.idata);
+    printf("SI%i:%i\n", i,machine->stack.data[i].data.idata);
   }
 }
 
@@ -57,8 +58,13 @@ void div_blvalue(struct BLValue* a, struct BLValue* b) {
   }
 }
 
+bool blvalue_eq(struct BLValue* a, struct BLValue* b) {
+  return a->data.idata == b->data.idata;
+}
+
 void step_machine(struct Machine* machine) {
    uint8_t const_type;
+   int32_t offset;
    struct BLValue new_value;
    struct BLValue lval;
    struct BLValue rval;
@@ -67,13 +73,15 @@ void step_machine(struct Machine* machine) {
     printf("Built with computed goto\n");
     #define GO_NEXT_INSTR() \
      goto *vm_states[machine->program[machine->pc]];
-    static void* vm_states[256] = {};
+    static void* vm_states[255] = {};
     vm_states[EXIT] = &&dEXIT;
     vm_states[PUSH_CONST] = &&dPUSH_CONST;
+    vm_states[PUSH_RELATIVE_SP] = &&dPUSH_RELATIVE_SP;
     vm_states[ADD] = &&dADD;
     vm_states[SUB] = &&dSUB;
     vm_states[MUL] = &&dMUL;
     vm_states[DIV] = &&dDIV;
+    vm_states[JMP] = &&dJMP;
   #else
     printf("Built with switch\n");
     #define GO_NEXT_INSTR() //no op
@@ -98,10 +106,17 @@ void step_machine(struct Machine* machine) {
 	    printf("Invalid type on push %i (%i)\n", const_type, BLI32);
 	    return;
         }
-	printf("Push\n");
         program_stack_push(&machine->stack, new_value);
 	GO_NEXT_INSTR();
         break;
+      case PUSH_RELATIVE_SP:
+        dPUSH_RELATIVE_SP:
+	offset = MEM_IMMEDIATE(int32_t, 0);
+	size_t pos = program_stack_size(&machine->stack) + offset;
+	program_stack_push(&machine->stack, machine->stack.data[pos]);
+	machine->pc += 5;
+	GO_NEXT_INSTR();
+	break;
       case ADD:
 	dADD:
 	lval = program_stack_pop(&machine->stack);
@@ -138,6 +153,33 @@ void step_machine(struct Machine* machine) {
 	machine->pc++;
 	GO_NEXT_INSTR();
 	break;
+      case JMP:
+        dJMP:
+        machine->pc = MEM_IMMEDIATE(uint32_t, 0);
+        GO_NEXT_INSTR();
+	break;
+      case JE:
+        dJE:
+	lval = program_stack_pop(&machine->stack);
+	rval = program_stack_pop(&machine->stack);
+        if (blvalue_eq(&lval, &rval)) {
+	  machine->pc = MEM_IMMEDIATE(uint32_t, 0);
+	} else {
+	  machine->pc += 5;
+	}
+        GO_NEXT_INSTR();
+	break;
+      case JNE:
+        dJNE:
+	lval = program_stack_pop(&machine->stack);
+	rval = program_stack_pop(&machine->stack);
+        if (!blvalue_eq(&lval, &rval)) {
+	  machine->pc = MEM_IMMEDIATE(uint32_t, 0);
+	} else {
+	  machine->pc += 5;
+	}
+        GO_NEXT_INSTR();
+	break;
     }
   }
 
@@ -164,5 +206,6 @@ int main(int argc, char** argv) {
   m1.ebp = 0;
   program_stack_init(&m1.stack);
   step_machine(&m1); 
+  printf("Final State\n");
   print_state(&m1);
 }

@@ -5,10 +5,14 @@
 enum BLOP {
   EXIT = 0,
   PUSH_CONST,
+  PUSH_RELATIVE_SP,
   ADD,
   SUB,
   MUL,
-  DIV 
+  DIV,
+  JMP,
+  JE,
+  JNE 
 };
 
 enum BLType {
