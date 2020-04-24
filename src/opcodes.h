@@ -4,7 +4,11 @@
 
 enum BLOP {
   EXIT = 0,
-  PUSH_CONST,  
+  PUSH_CONST,
+  ADD,
+  SUB,
+  MUL,
+  DIV 
 };
 
 enum BLType {

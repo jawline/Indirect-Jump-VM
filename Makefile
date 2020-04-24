@@ -8,5 +8,5 @@ test:
 	@echo "Generating ByteCode"
 	./blas example.blas example.bc
 	@echo "Running vms"
-	time ./vm_fast
-	time ./vm_slow
+	time ./vm_fast example.bc
+	time ./vm_slow example.bc
