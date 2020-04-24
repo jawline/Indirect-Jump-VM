@@ -3,9 +3,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include "opcodes.h"
+#include <bllist.h>
+
+DYNAMIC_ARRAY(program_stack, struct BLValue, 1024);
 
 struct Machine {
   uint8_t* program;
+  struct program_stack stack;
   uint64_t pc, esp, ebp;
 };
 
@@ -15,6 +19,10 @@ struct Machine {
 
 void print_state(struct Machine* machine) {
   printf("PC:%li EBP:%li ESP:%li\n", machine->pc, machine->ebp, machine->esp);
+  size_t max_size = program_stack_size(&machine->stack);
+  for (size_t i = 0; i < max_size; i++) {
+    printf("SI%i:%i", machine->stack.data[i].data.idata);
+  }
 }
 
 void step_machine(struct Machine* machine) {
@@ -49,7 +57,7 @@ void step_machine(struct Machine* machine) {
             break;
 	  default: printf("Invalid type on push\n"); return;
         }
-
+        program_stack_push(&machine->stack, new_value);
         break;
     }
   }
@@ -62,6 +70,7 @@ int main(int argc, char** argv) {
   m1.pc = 0;
   m1.esp = 0;
   m1.ebp = 0;
+  program_stack_init(&m1.stack);
   step_machine(&m1); 
   print_state(&m1);
 }

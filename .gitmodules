@@ -1,0 +1,3 @@
+[submodule "blakec"]
+	path = blakec
+	url = git@github.com:jawline/blakec.git
