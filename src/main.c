@@ -60,7 +60,7 @@ void div_blvalue(struct BLValue* a, struct BLValue* b) {
   }
 }
 
-void blvalue_eq(struct BLValue* a, struct BLValue* b) __attribute__((always_inline));
+bool blvalue_eq(struct BLValue* a, struct BLValue* b) __attribute__((always_inline));
 bool blvalue_eq(struct BLValue* a, struct BLValue* b) {
   return a->data.idata == b->data.idata;
 }

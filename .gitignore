@@ -1,4 +1,6 @@
 a.out
+*.blas
+*.bc
 vm
 vm_*
 blas
