@@ -173,7 +173,7 @@ void parse(FILE* rdr, struct program* out) {
       strcpy(nl.name, item.lbuffer);
       nl.pos = program_size(out);
       labels_push(&label_list, nl);
-      printf("Label %s at %i\n", nl.name, nl.pos);
+      printf("Label %s at %zu\n", nl.name, nl.pos);
       fgetc(rdr);
       resolve_labels(out, &label_list, &unresolved);
     } else { //Command

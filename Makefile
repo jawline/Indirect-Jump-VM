@@ -1,6 +1,6 @@
 all: build test
 
-CFLAGS= -O1
+CFLAGS=-O1
  
 build:
 	gcc -Iblakec/src/ ${CFLAGS} ./src/blas.c -o blas
