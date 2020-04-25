@@ -11,21 +11,20 @@ DYNAMIC_ARRAY(program_stack, struct BLValue, 1024);
 struct Machine {
   uint8_t* program;
   struct program_stack stack;
-  uint64_t pc, esp, ebp;
+  uint64_t pc, ebp;
 };
-
-#define EQ_BIT 1
 
 #define MEM_IMMEDIATE(type, offset) *(type*)(machine->program + machine->pc + 1 + offset)
 
 void print_state(struct Machine* machine) {
-  printf("PC:%lu EBP:%lu ESP:%li\n", machine->pc, machine->ebp, machine->esp);
   size_t max_size = program_stack_size(&machine->stack);
+  printf("PC:%lu EBP:%lu ESP:%li\n", machine->pc, machine->ebp, max_size);
   for (size_t i = 0; i < max_size; i++) {
     printf("SI%i:%i\n", i,machine->stack.data[i].data.idata);
   }
 }
 
+void add_blvalue(struct BLValue* a, struct BLValue* b) __attribute__((always_inline)); 
 void add_blvalue(struct BLValue* a, struct BLValue* b) {
   switch (a->type) {
     case BLI32:
@@ -34,6 +33,7 @@ void add_blvalue(struct BLValue* a, struct BLValue* b) {
   }
 }
 
+void sub_blvalue(struct BLValue* a, struct BLValue* b) __attribute__((always_inline));
 void sub_blvalue(struct BLValue* a, struct BLValue* b) {
   switch (a->type) {
     case BLI32:
@@ -42,6 +42,7 @@ void sub_blvalue(struct BLValue* a, struct BLValue* b) {
   }
 }
 
+void mul_blvalue(struct BLValue* a, struct BLValue* b) __attribute__((always_inline));
 void mul_blvalue(struct BLValue* a, struct BLValue* b) {
   switch (a->type) {
     case BLI32:
@@ -50,6 +51,7 @@ void mul_blvalue(struct BLValue* a, struct BLValue* b) {
   }
 }
 
+void div_blvalue(struct BLValue* a, struct BLValue* b) __attribute__((always_inline));
 void div_blvalue(struct BLValue* a, struct BLValue* b) {
   switch (a->type) {
     case BLI32:
@@ -58,6 +60,7 @@ void div_blvalue(struct BLValue* a, struct BLValue* b) {
   }
 }
 
+void blvalue_eq(struct BLValue* a, struct BLValue* b) __attribute__((always_inline));
 bool blvalue_eq(struct BLValue* a, struct BLValue* b) {
   return a->data.idata == b->data.idata;
 }
@@ -91,107 +94,106 @@ void step_machine(struct Machine* machine) {
   #endif
 
   while (1) {
-    //printf("%li\n", machine->mem[machine->pc]);
     switch (machine->program[machine->pc]) {
-      case EXIT: dEXIT:
+      case EXIT:
+        dEXIT:
         printf("Bye. Have a good time\n");
-	return;
+	      return;
       case PUSH_CONST:
         dPUSH_CONST:
        	const_type = MEM_IMMEDIATE(uint8_t, 0);
-	new_value.type = const_type;
+        new_value.type = const_type;
         switch (const_type) {
           case BLI32:
-	    new_value.data.idata = MEM_IMMEDIATE(int32_t, 1);
-	    machine->pc += sizeof(int32_t) + 2;
+	          new_value.data.idata = MEM_IMMEDIATE(int32_t, 1);
+	          machine->pc += sizeof(int32_t) + 2;
             break;
-	  default:
-	    printf("Invalid type on push %i (%i)\n", const_type, BLI32);
-	    return;
+	        default:
+            printf("Invalid type on push %i (%i)\n", const_type, BLI32);
+	          return;
         }
         program_stack_push(&machine->stack, new_value);
-	//print_state(machine);
-	GO_NEXT_INSTR();
+	      GO_NEXT_INSTR();
         break;
       case PUSH_RELATIVE_SP:
         dPUSH_RELATIVE_SP:
-	offset = MEM_IMMEDIATE(int32_t, 0);
-	size_t pos = program_stack_size(&machine->stack) + offset;
-	program_stack_push(&machine->stack, machine->stack.data[pos]);
-	machine->pc += 5;
-	GO_NEXT_INSTR();
-	break;
+	      offset = MEM_IMMEDIATE(int32_t, 0);
+	      size_t pos = program_stack_size(&machine->stack) + offset;
+	      program_stack_push(&machine->stack, machine->stack.data[pos]);
+	      machine->pc += 5;
+	      GO_NEXT_INSTR();
+	      break;
       case POP:
-dPOP:
-	program_stack_pop(&machine->stack);
-	machine->pc++;
-	GO_NEXT_INSTR();
-	break;
+        dPOP:
+	      program_stack_pop(&machine->stack);
+	      machine->pc++;
+	      GO_NEXT_INSTR();
+	      break;
       case ADD:
-	dADD:
-	//printf("ADD\n");
-	lval = program_stack_pop(&machine->stack);
-	rval = program_stack_pop(&machine->stack);
-	add_blvalue(&lval, &rval);
-	program_stack_push(&machine->stack, lval);
-        //print_state(machine);
-	machine->pc++;
-	GO_NEXT_INSTR();
-	break;
+        dADD:
+	      //printf("ADD\n");
+	      rval = program_stack_pop(&machine->stack);
+	      lval = program_stack_pop(&machine->stack);
+	      add_blvalue(&lval, &rval);
+	      program_stack_push(&machine->stack, lval);
+              //print_state(machine);
+	      machine->pc++;
+	      GO_NEXT_INSTR();
+	      break;
       case SUB:
-	dSUB:
-	lval = program_stack_pop(&machine->stack);
-	rval = program_stack_pop(&machine->stack);
-	sub_blvalue(&lval, &rval);
-	program_stack_push(&machine->stack, lval);
-	machine->pc++;
-	GO_NEXT_INSTR();
-	break;
+        dSUB:
+	      rval = program_stack_pop(&machine->stack);
+	      lval = program_stack_pop(&machine->stack);
+	      sub_blvalue(&lval, &rval);
+	      program_stack_push(&machine->stack, lval);
+	      machine->pc++;
+	      GO_NEXT_INSTR();
+	      break;
       case DIV:
-	dDIV:
-	lval = program_stack_pop(&machine->stack);
-	rval = program_stack_pop(&machine->stack);
-	div_blvalue(&lval, &rval);
-	program_stack_push(&machine->stack, lval);
-	machine->pc++;
-	GO_NEXT_INSTR();
-	break;
+	      dDIV:
+	      rval = program_stack_pop(&machine->stack);
+	      lval = program_stack_pop(&machine->stack);
+	      div_blvalue(&lval, &rval);
+	      program_stack_push(&machine->stack, lval);
+	      machine->pc++;
+	      GO_NEXT_INSTR();
+	      break;
       case MUL:
-	dMUL:
-	lval = program_stack_pop(&machine->stack);
-	rval = program_stack_pop(&machine->stack);
-	mul_blvalue(&lval, &rval);
-	program_stack_push(&machine->stack, lval);
-	machine->pc++;
-	GO_NEXT_INSTR();
-	break;
+	      dMUL:
+	      rval = program_stack_pop(&machine->stack);
+	      lval = program_stack_pop(&machine->stack);
+	      mul_blvalue(&lval, &rval);
+	      program_stack_push(&machine->stack, lval);
+	      machine->pc++;
+	      GO_NEXT_INSTR();
+	      break;
       case JMP:
         dJMP:
         machine->pc = MEM_IMMEDIATE(uint32_t, 0);
         GO_NEXT_INSTR();
-	break;
+	      break;
       case JE:
         dJE:
-	lval = program_stack_pop(&machine->stack);
-	rval = program_stack_pop(&machine->stack);
+	      lval = program_stack_pop(&machine->stack);
+	      rval = program_stack_pop(&machine->stack);
         if (blvalue_eq(&lval, &rval)) {
-	  machine->pc = MEM_IMMEDIATE(uint32_t, 0);
-	} else {
-	  machine->pc += 5;
-	}
+	        machine->pc = MEM_IMMEDIATE(uint32_t, 0);
+	      } else {
+	        machine->pc += 5;
+	      }
         GO_NEXT_INSTR();
-	break;
+        break;
       case JNE:
         dJNE:
-	lval = program_stack_pop(&machine->stack);
-	rval = program_stack_pop(&machine->stack);
+        lval = program_stack_pop(&machine->stack);
+        rval = program_stack_pop(&machine->stack);
         if (!blvalue_eq(&lval, &rval)) {
-	  machine->pc = MEM_IMMEDIATE(uint32_t, 0);
-	} else {
-	  machine->pc += 5;
-	}
+	        machine->pc = MEM_IMMEDIATE(uint32_t, 0);
+	      } else {
+	        machine->pc += 5;
+	      }
         GO_NEXT_INSTR();
-	break;
+	      break;
     }
   }
 
@@ -214,7 +216,6 @@ int main(int argc, char** argv) {
   struct Machine m1;
   m1.program = read_entire_program(argv[1]);
   m1.pc = 0;
-  m1.esp = 0;
   m1.ebp = 0;
   program_stack_init(&m1.stack);
   step_machine(&m1); 
