@@ -6,6 +6,14 @@
 #include <bllist.h>
 #include <stdbool.h>
 
+#ifdef DEBUG
+  #define DPRINT(x) fprintf(stderr, x)
+  #define DPRINTSTATE() print_state(machine)
+#else
+  #define DPRINT(x)
+  #define DPRINTSTATE()
+#endif
+
 DYNAMIC_ARRAY(program_stack, struct BLValue, 1024);
 
 struct Machine {
@@ -125,6 +133,7 @@ void step_machine(struct Machine* machine) {
         break;
       case POP:
         dPOP:
+        DPRINTSTATE(); 
         program_stack_pop(&machine->stack);
         machine->pc++;
         GO_NEXT_INSTR();
@@ -183,6 +192,7 @@ void step_machine(struct Machine* machine) {
         break;
       case JNE:
         dJNE:
+        DPRINTSTATE(); 
         lval = program_stack_pop(&machine->stack);
         rval = program_stack_pop(&machine->stack);
         if (!blvalue_eq(&lval, &rval)) {

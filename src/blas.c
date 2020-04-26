@@ -126,8 +126,8 @@ void resolve_labels(struct program* out, struct labels* label_list, struct label
       cl = &label_list->data[j];
       if (strcmp(tl->name, cl->name) == 0) {
         *((uint32_t*) (out->data + tl->pos)) = cl->pos;
-        //printf("Resolved a label\n");
-        //printf("%li\n", *((uint32_t*) (out->data + tl->pos)));	
+        printf("Resolved a label\n");
+        printf("%li\n", *((uint32_t*) (out->data + tl->pos)));	
       } else {
         //printf("Not resolved %s %s\n", tl->name, cl->name);
       }
@@ -145,7 +145,8 @@ void build_jmp(enum BLOP type, FILE* rdr, struct program* out, struct labels* la
     printf("Build JNE %i\n", type);
     program_push(out, type);
     size_t ref_start = program_size(out);
-    program_expand(out, sizeof(uint32_t));
+    program_expand(out, 4);
+
     strcpy(nl.name, item.lbuffer);
     nl.pos = ref_start;
     labels_push(unresolved, nl);
@@ -219,6 +220,17 @@ int main(int argc, char** argv) {
   FILE* fin = fopen(argv[1], "r");
   printf("Lex next line\n");
   parse(fin, &p1);
+  add_end(&p1);
+
   FILE* fout = fopen(argv[2], "w");
-  fwrite(p1.data, program_size(&p1), 1, fout);
+
+  if (!fout) {
+    printf("Could not open file\n");
+  }
+
+  if (fwrite(p1.data, program_size(&p1), 1, fout) != 1) {
+    printf("Could not write file\n");
+    return 1;
+  }
+  return 0;
 }

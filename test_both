@@ -1,3 +1,9 @@
 #!/usr/bin/env bash
-gcc -O0 src/main.c && time ./a.out slow; time ./a.out fast
-
+#echo "Generating a random program"
+python scripts/randmath.py $1 $2 > example.blas
+#echo "Generating ByteCode"
+./blas example.blas example.bc 2>&1 1>/dev/null
+#echo "Running vms"
+FAST_PATH=$(/usr/bin/time --format='%U' ./vm_fast example.bc 2>&1 1>/dev/null)
+SLOW_PATH=$(/usr/bin/time --format='%U' ./vm_slow example.bc 2>&1 1>/dev/null)
+echo $FAST_PATH,$SLOW_PATH

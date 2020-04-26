@@ -1,0 +1,5 @@
+tmpfile=$(mktemp /tmp/pltres.XXXXXX)
+echo "Writing to ${tmpfile}"
+./test_rig > $tmpfile
+./scripts/plot.py $tmpfile
+rm $tmpfile
